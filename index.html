@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robotic Arm Control Panel</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #1a1a1a; color: #ffffff; padding: 20px; }
+        .btn { padding: 15px 25px; margin: 10px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.2s; }
+        .btn:active { transform: translateY(2px); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .btn-stop { background-color: #e74c3c; width: 80%; max-width: 300px; font-size: 20px;}
+        .btn-auto { background-color: #27ae60; }
+        .btn-manual { background-color: #2980b9; }
+        .btn-move { background-color: #555; padding: 15px 20px; margin: 5px; width: 60px; height: 60px; font-size: 18px; }
+        .dashboard { background: #2c2c2c; padding: 20px; border-radius: 12px; margin: 20px auto; max-width: 450px; box-shadow: 0 8px 15px rgba(0,0,0,0.5); }
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); max-width: 200px; margin: 20px auto; gap: 5px; justify-items: center;}
+        input { padding: 12px; font-size: 16px; width: 60%; border-radius: 5px; border: 1px solid #555; background: #333; color: white; text-align: center; margin-bottom: 10px; }
+        h1 { color: #00d2ff; }
+        h3 { color: #aaaaaa; border-bottom: 1px solid #444; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>Robotic Arm Dashboard</h1>
+    
+    <div class="dashboard">
+        <h3>System Modes</h3>
+        <button class="btn btn-stop" onclick="sendCommand('R')">EMERGENCY STOP</button><br>
+        <button class="btn btn-manual" onclick="sendCommand('M')">MANUAL MODE</button>
+        <button class="btn btn-auto" onclick="sendCommand('T')">AUTO MODE</button>
+        
+        <br><br>
+        <p style="color: #bbb; font-size: 14px;">Enter colors to sort (e.g. BLUE,GREEN):</p>
+        <input type="text" id="colorInput" placeholder="BLUE,GREEN">
+        <button class="btn btn-auto" onclick="sendColors()">Update Colors</button>
+    </div>
+
+    <div class="dashboard">
+        <h3>Manual Controls</h3>
+        <p style="color: #888; font-size: 14px;">Base (A/D) | Shoulder (W/S) | Elbow (I/K) | Gripper (J/L)</p>
+        
+        <div style="display: flex; justify-content: space-around;">
+            <!-- Base & Shoulder -->
+            <div class="controls">
+                <div></div><button class="btn btn-move" onclick="sendCommand('W')">W</button><div></div>
+                <button class="btn btn-move" onclick="sendCommand('A')">A</button>
+                <button class="btn btn-move" onclick="sendCommand('S')">S</button>
+                <button class="btn btn-move" onclick="sendCommand('D')">D</button>
+            </div>
+            <!-- Elbow & Gripper -->
+            <div class="controls">
+                <div></div><button class="btn btn-move" onclick="sendCommand('I')">I</button><div></div>
+                <button class="btn btn-move" onclick="sendCommand('J')">J</button>
+                <button class="btn btn-move" onclick="sendCommand('K')">K</button>
+                <button class="btn btn-move" onclick="sendCommand('L')">L</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <h3>Sorting Stats</h3>
+        <h2 style="color: #3498db;">Color 1 Placed: <span id="count1">0</span></h2>
+        <h2 style="color: #2ecc71;">Color 2 Placed: <span id="count2">0</span></h2>
+    </div>
+
+    <!-- Firebase SDKs (Modular Version) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Your Firebase configuration from the screenshot
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzvBGo7jcg0kZNe-GqHgfYMM8ocNIk6iI",
+            databaseURL: "https://robo-arm-41afc-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "robo-arm-41afc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Function to send commands to Firebase
+        window.sendCommand = function(cmd) {
+            set(ref(db, 'arm/command'), cmd);
+            // Clear command after 500ms so ESP32 knows it's a single trigger
+            setTimeout(() => set(ref(db, 'arm/command'), ""), 500); 
+        };
+
+        window.sendColors = function() {
+            let colors = document.getElementById("colorInput").value;
+            if(colors != "") {
+                window.sendCommand(colors.toUpperCase());
+                document.getElementById("colorInput").value = ""; // clear input
+            }
+        };
+
+        // Listen for live counts from ESP32
+        onValue(ref(db, 'arm/stats'), (snapshot) => {
+            const data = snapshot.val();
+            if(data) {
+                document.getElementById('count1').innerText = data.color1 || 0;
+                document.getElementById('count2').innerText = data.color2 || 0;
+            }
+        });
+    </script>
+</body>
+</html>
