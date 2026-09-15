@@ -6,8 +6,8 @@
     <title>Robotic Arm Control Panel</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; display: flex; justify-content: center;}
-        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; width: 100%; }
-        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1200px; width: 100%; }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
         
         .panel { background-color: #1e1e1e; border-radius: 8px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         h3 { color: #4ade80; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; font-size: 18px; }
@@ -20,10 +20,10 @@
         .btn-yellow { background-color: #f59e0b; }
         .btn-blue { background-color: #3b82f6; }
         
-        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+        .status-grid { display: grid; grid-template-columns: 1fr; gap: 10px; font-size: 14px; }
         .status-item span { font-weight: bold; color: #4ade80; }
         
-        .terminal-box { background-color: #000; color: #00ff00; font-family: 'Courier New', Courier, monospace; height: 180px; overflow-y: auto; padding: 10px; border-radius: 5px; font-size: 13px; margin-bottom: 10px; text-align: left; }
+        .terminal-box { background-color: #000; color: #00ff00; font-family: 'Courier New', Courier, monospace; height: 150px; overflow-y: auto; padding: 10px; border-radius: 5px; font-size: 13px; margin-bottom: 10px; text-align: left; }
         .terminal-input-group { display: flex; gap: 10px; }
         .terminal-input-group input { flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 5px; }
         
@@ -36,55 +36,53 @@
         .btn-dpad.down { grid-column: 2; grid-row: 2; }
         .btn-dpad.right { grid-column: 3; grid-row: 2; }
         
-        .ik-group { display: flex; gap: 10px; margin-top: 10px; }
-        .ik-group input { flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 5px; text-align: center; }
+        .ik-group, .color-group { display: flex; gap: 10px; margin-top: 10px; }
+        .ik-group input, .color-group input { flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 5px; text-align: center; text-transform: uppercase;}
         .ik-group input:disabled { background: #1a1a1a; color: #555; }
         
-        .color-group { display: flex; gap: 10px; margin-top: 10px; }
-        .color-group input { flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 5px; text-align: center; }
+        #armCanvas { background-color: #111; border: 1px solid #333; border-radius: 8px; width: 100%; height: 300px; display: block; margin: 0 auto; }
+        .action-text { text-align: center; font-size: 16px; font-weight: bold; color: #f59e0b; margin-top: 10px; min-height: 20px;}
+        
+        #statsContainer { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 150px; overflow-y: auto; padding-right: 5px; }
+        .stat-badge { background: #2d2d2d; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- LEFT COLUMN -->
     <div class="left-col">
-        <!-- SYSTEM STATUS -->
         <div class="panel" style="margin-bottom: 20px;">
-            <h3>System Status</h3>
-            <div class="status-grid">
-                <div class="status-item">Current Mode: <span id="uiMode" style="color:#f59e0b;">STOPPED</span></div>
-                <div class="status-item">Target Colors: <span id="uiTarget" style="color:#3b82f6;">NONE</span></div>
-            </div>
+            <h3>Live Arm Visualizer 🤖</h3>
+            <canvas id="armCanvas" width="500" height="300"></canvas>
+            <div class="action-text" id="actionText">STATUS: IDLE</div>
         </div>
-        
-        <!-- SORTING STATS -->
+
         <div class="panel" style="margin-bottom: 20px;">
-            <h3>Sorting Statistics</h3>
-            <div class="status-grid">
-                <div class="status-item">Color 1 Sorted: <span id="count1" style="font-size: 18px;">0</span></div>
-                <div class="status-item">Color 2 Sorted: <span id="count2" style="font-size: 18px;">0</span></div>
+            <h3>Session Sorting Stats 📊</h3>
+            <div id="statsContainer">
+                <div style="color:#888; padding: 10px;">Waiting for first sorted object in this session...</div>
             </div>
         </div>
 
-        <!-- TERMINAL -->
         <div class="panel">
             <h3>Terminal / Serial Output</h3>
             <div class="terminal-box" id="terminal">
                 <div>> WebApp Initialized. Connecting to Firebase...</div>
             </div>
             <div class="terminal-input-group">
-                <input type="text" id="termInput" placeholder="Type command here (e.g. R, M, 12,5)..." onkeypress="handleTerminalEnter(event)">
+                <input type="text" id="termInput" placeholder="Command (e.g. R, M, 12,5)..." onkeypress="handleTerminalEnter(event)">
                 <button class="btn btn-blue" onclick="sendFromTerminal()">Send</button>
             </div>
         </div>
     </div>
 
-    <!-- RIGHT COLUMN -->
     <div class="right-col">
-        <!-- MASTER CONTROL -->
         <div class="panel" style="margin-bottom: 20px;">
             <h3>Master Control</h3>
+            <div class="status-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 15px; background: #2d2d2d; padding: 10px; border-radius: 5px;">
+                <div class="status-item">Mode: <span id="uiMode" style="color:#f59e0b;">STOPPED</span></div>
+                <div class="status-item">Targets: <span id="uiTarget" style="color:#3b82f6;">NONE</span></div>
+            </div>
             <button class="btn btn-red" onclick="sendCommand('R', 'EMERGENCY STOP')">⨂ EMERGENCY STOP (R)</button>
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-yellow" style="flex: 1;" onclick="sendCommand('M', 'MANUAL MODE')">Manual (M)</button>
@@ -92,17 +90,14 @@
             </div>
         </div>
 
-        <!-- TARGET SELECTION -->
         <div class="panel" style="margin-bottom: 20px;">
             <h3>Target Selection</h3>
-            <p style="font-size: 13px; color: #888; margin-top: 0;">Enter colors separated by a comma (e.g. BLUE,GREEN)</p>
             <div class="color-group">
-                <input type="text" id="colorInput" placeholder="BLUE,GREEN">
+                <input type="text" id="colorInput" placeholder="e.g. BLUE,GREEN">
                 <button class="btn btn-blue" onclick="sendColors()">Update</button>
             </div>
         </div>
 
-        <!-- MANUAL JOGGING -->
         <div class="panel" style="margin-bottom: 20px;">
             <h3>Manual Jogging Controls</h3>
             <div class="controls-wrapper">
@@ -127,20 +122,18 @@
             </div>
         </div>
 
-        <!-- COORDINATE APPROACH (IK) -->
         <div class="panel">
             <h3>Coordinate Approach (IK)</h3>
             <p style="font-size: 12px; color: #ef4444; margin-top: 0;" id="ikWarning">* Enable Manual Mode (M) to enter coordinates.</p>
             <div class="ik-group">
                 <input type="number" id="ikX" placeholder="X (cm)" disabled>
                 <input type="number" id="ikY" placeholder="Y (cm)" disabled>
-                <button class="btn btn-blue" id="ikBtn" disabled onclick="sendIK()">GO (X,Y)</button>
+                <button class="btn btn-blue" id="ikBtn" disabled onclick="sendIK()">GO</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Firebase SDKs -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -154,48 +147,96 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // --- ANIMATION LOGIC ---
+    const canvas = document.getElementById("armCanvas");
+    const ctx = canvas.getContext("2d");
+    let armData = { b: 30, s: 60, e: 180, g: 90, act: "INITIALIZING..." };
+
+    function drawArm() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const originX = canvas.width / 2; const originY = canvas.height - 30;
+        const L1 = 80; const L2 = 80;
+        
+        let sAngle = (180 - armData.s) * (Math.PI / 180);
+        let eAngle = (armData.e - 90) * (Math.PI / 180); 
+        let elbowX = originX + L1 * Math.cos(sAngle); let elbowY = originY - L1 * Math.sin(sAngle);
+        let wristX = elbowX + L2 * Math.cos(sAngle + eAngle); let wristY = elbowY - L2 * Math.sin(sAngle + eAngle);
+
+        ctx.fillStyle = "#333"; ctx.fillRect(originX - 30, originY, 60, 30);
+        ctx.beginPath(); ctx.arc(originX, originY, 15, 0, Math.PI * 2); ctx.fillStyle = "#f59e0b"; ctx.fill();
+
+        ctx.beginPath(); ctx.moveTo(originX, originY); ctx.lineTo(elbowX, elbowY); ctx.lineWidth = 12; ctx.strokeStyle = "#cbd5e1"; ctx.lineCap = "round"; ctx.stroke();
+        ctx.beginPath(); ctx.arc(elbowX, elbowY, 10, 0, Math.PI * 2); ctx.fillStyle = "#3b82f6"; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(elbowX, elbowY); ctx.lineTo(wristX, wristY); ctx.lineWidth = 8; ctx.strokeStyle = "#94a3b8"; ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(wristX, wristY); ctx.lineTo(wristX + 20 * Math.cos(sAngle + eAngle - 0.5), wristY - 20 * Math.sin(sAngle + eAngle - 0.5));
+        ctx.moveTo(wristX, wristY); ctx.lineTo(wristX + 20 * Math.cos(sAngle + eAngle + 0.5), wristY - 20 * Math.sin(sAngle + eAngle + 0.5));
+        ctx.lineWidth = 4; ctx.strokeStyle = (armData.g > 150) ? "#ef4444" : "#4ade80"; ctx.stroke();
+
+        if(armData.act.includes("GRABBING") || armData.act.includes("DROPPING") || armData.act.includes("APPROACHING")) {
+            ctx.fillStyle = armData.act.includes("RED") ? "#ef4444" : armData.act.includes("BLUE") ? "#3b82f6" : armData.act.includes("GREEN") ? "#4ade80" : "#f59e0b";
+            ctx.fillRect(wristX - 10, wristY + 5, 20, 20);
+        }
+        document.getElementById("actionText").innerText = "STATUS: " + armData.act + ` [Base: ${armData.b}°]`;
+    }
+    drawArm();
+
+    onValue(ref(db, 'arm/telemetry'), (snapshot) => {
+        if(snapshot.val()) {
+            try { armData = JSON.parse(snapshot.val()); drawArm(); } catch(e) {}
+        }
+    });
+
+    // --- SESSION STATS GENERATOR ---
+    onValue(ref(db, 'arm/stats'), (snapshot) => {
+        const data = snapshot.val();
+        const container = document.getElementById('statsContainer');
+        if(data) {
+            container.innerHTML = ""; 
+            for (const [colorName, count] of Object.entries(data)) {
+                let badgeColor = "#4ade80"; 
+                if(colorName === "RED") badgeColor = "#ef4444";
+                else if(colorName === "BLUE") badgeColor = "#3b82f6";
+                else if(colorName === "YELLOW") badgeColor = "#f59e0b";
+                
+                container.innerHTML += `
+                    <div class="stat-badge" style="border-color: ${badgeColor};">
+                        <span style="font-weight: bold; color: #ddd;">${colorName}</span>
+                        <span style="font-size: 20px; font-weight: bold; color: ${badgeColor};">${count}</span>
+                    </div>
+                `;
+            }
+        } else {
+            // When ESP clears the node, UI returns to empty state
+            container.innerHTML = `<div style="color:#888; padding: 10px;">Waiting for first sorted object in this session...</div>`;
+        }
+    });
+
+    // --- TERMINAL & CONTROLS ---
     function logTerminal(msg) {
         const term = document.getElementById('terminal');
         const time = new Date().toLocaleTimeString('en-US', { hour12: false });
         term.innerHTML += `<div><span style="color:#555">[${time}]</span> ${msg}</div>`;
-        term.scrollTop = term.scrollHeight; // Auto-scroll to bottom
+        term.scrollTop = term.scrollHeight; 
     }
-
-    logTerminal("> Connected to Database successfully.");
 
     window.sendCommand = function(cmd, desc = "") {
         set(ref(db, 'arm/command'), cmd);
-        
-        let logMsg = `> TX: ${cmd}`;
-        if(desc) logMsg += ` (${desc})`;
-        logTerminal(logMsg);
+        let logMsg = `> TX: ${cmd}`; if(desc) logMsg += ` (${desc})`; logTerminal(logMsg);
 
-        // UI Logic for Modes
         if(cmd === 'M') {
             document.getElementById('uiMode').innerText = "MANUAL";
             document.getElementById('uiMode').style.color = "#3b82f6";
-            
-            // Enable IK Inputs
-            document.getElementById('ikX').disabled = false;
-            document.getElementById('ikY').disabled = false;
-            document.getElementById('ikBtn').disabled = false;
-            document.getElementById('ikWarning').innerText = "* Manual mode active. IK inputs enabled.";
-            document.getElementById('ikWarning').style.color = "#4ade80";
+            document.getElementById('ikX').disabled = false; document.getElementById('ikY').disabled = false; document.getElementById('ikBtn').disabled = false;
+            document.getElementById('ikWarning').innerText = "* Manual mode active. IK inputs enabled."; document.getElementById('ikWarning').style.color = "#4ade80";
         } 
         else if (cmd === 'T' || cmd === 'R') {
-            let modeName = cmd === 'T' ? "AUTONOMOUS" : "STOPPED";
-            let colorCode = cmd === 'T' ? "#4ade80" : "#ef4444";
-            document.getElementById('uiMode').innerText = modeName;
-            document.getElementById('uiMode').style.color = colorCode;
-            
-            // Disable IK Inputs
-            document.getElementById('ikX').disabled = true;
-            document.getElementById('ikY').disabled = true;
-            document.getElementById('ikBtn').disabled = true;
-            document.getElementById('ikWarning').innerText = "* Enable Manual Mode (M) to enter coordinates.";
-            document.getElementById('ikWarning').style.color = "#ef4444";
+            document.getElementById('uiMode').innerText = cmd === 'T' ? "AUTONOMOUS" : "STOPPED";
+            document.getElementById('uiMode').style.color = cmd === 'T' ? "#4ade80" : "#ef4444";
+            document.getElementById('ikX').disabled = true; document.getElementById('ikY').disabled = true; document.getElementById('ikBtn').disabled = true;
+            document.getElementById('ikWarning').innerText = "* Enable Manual Mode (M) to enter coordinates."; document.getElementById('ikWarning').style.color = "#ef4444";
         }
-
         setTimeout(() => set(ref(db, 'arm/command'), ""), 500); 
     };
 
@@ -209,47 +250,17 @@
     };
 
     window.sendIK = function() {
-        let x = document.getElementById("ikX").value;
-        let y = document.getElementById("ikY").value;
+        let x = document.getElementById("ikX").value; let y = document.getElementById("ikY").value;
         if(x !== "" && y !== "") {
-            let cmd = `${x},${y}`;
-            window.sendCommand(cmd, `IK MOVE TO X:${x}, Y:${y}`);
-            document.getElementById("ikX").value = "";
-            document.getElementById("ikY").value = "";
+            window.sendCommand(`${x},${y}`, `IK MOVE TO X:${x}, Y:${y}`);
+            document.getElementById("ikX").value = ""; document.getElementById("ikY").value = "";
         }
     };
-
     window.sendFromTerminal = function() {
         let input = document.getElementById("termInput");
-        if(input.value !== "") {
-            window.sendCommand(input.value.toUpperCase(), "MANUAL TERMINAL ENTRY");
-            input.value = "";
-        }
+        if(input.value !== "") { window.sendCommand(input.value.toUpperCase(), "TERMINAL ENTRY"); input.value = ""; }
     };
-
-    window.handleTerminalEnter = function(e) {
-        if(e.key === 'Enter') {
-            window.sendFromTerminal();
-        }
-    };
-
-    // Listen for Stats from ESP32
-    onValue(ref(db, 'arm/stats'), (snapshot) => {
-        const data = snapshot.val();
-        if(data) {
-            let c1 = data.color1 || 0;
-            let c2 = data.color2 || 0;
-            
-            let oldC1 = document.getElementById('count1').innerText;
-            let oldC2 = document.getElementById('count2').innerText;
-
-            document.getElementById('count1').innerText = c1;
-            document.getElementById('count2').innerText = c2;
-
-            if(c1 > oldC1) logTerminal(`> RX: Sorted item for Color 1! Total: ${c1}`);
-            if(c2 > oldC2) logTerminal(`> RX: Sorted item for Color 2! Total: ${c2}`);
-        }
-    });
+    window.handleTerminalEnter = function(e) { if(e.key === 'Enter') window.sendFromTerminal(); };
 </script>
 </body>
 </html>
