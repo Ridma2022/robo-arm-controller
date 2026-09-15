@@ -5,102 +5,251 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robotic Arm Control Panel</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #1a1a1a; color: #ffffff; padding: 20px; }
-        .btn { padding: 15px 25px; margin: 10px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.2s; }
-        .btn:active { transform: translateY(2px); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-        .btn-stop { background-color: #e74c3c; width: 80%; max-width: 300px; font-size: 20px;}
-        .btn-auto { background-color: #27ae60; }
-        .btn-manual { background-color: #2980b9; }
-        .btn-move { background-color: #555; padding: 15px 20px; margin: 5px; width: 60px; height: 60px; font-size: 18px; }
-        .dashboard { background: #2c2c2c; padding: 20px; border-radius: 12px; margin: 20px auto; max-width: 450px; box-shadow: 0 8px 15px rgba(0,0,0,0.5); }
-        .controls { display: grid; grid-template-columns: repeat(3, 1fr); max-width: 200px; margin: 20px auto; gap: 5px; justify-items: center;}
-        input { padding: 12px; font-size: 16px; width: 60%; border-radius: 5px; border: 1px solid #555; background: #333; color: white; text-align: center; margin-bottom: 10px; }
-        h1 { color: #00d2ff; }
-        h3 { color: #aaaaaa; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; display: flex; justify-content: center;}
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; width: 100%; }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        
+        .panel { background-color: #1e1e1e; border-radius: 8px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        h3 { color: #4ade80; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; font-size: 18px; }
+        
+        .btn { padding: 10px 20px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; color: white; transition: 0.2s; text-transform: uppercase; }
+        .btn:active { transform: scale(0.95); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-red { background-color: #ef4444; width: 100%; padding: 15px; font-size: 18px; margin-bottom: 15px; }
+        .btn-yellow { background-color: #f59e0b; }
+        .btn-blue { background-color: #3b82f6; }
+        
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+        .status-item span { font-weight: bold; color: #4ade80; }
+        
+        .terminal-box { background-color: #000; color: #00ff00; font-family: 'Courier New', Courier, monospace; height: 180px; overflow-y: auto; padding: 10px; border-radius: 5px; font-size: 13px; margin-bottom: 10px; text-align: left; }
+        .terminal-input-group { display: flex; gap: 10px; }
+        .terminal-input-group input { flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 5px; }
+        
+        .controls-wrapper { display: flex; justify-content: space-around; margin-top: 20px; }
+        .d-pad { display: grid; grid-template-columns: 50px 50px 50px; grid-template-rows: 50px 50px; gap: 5px; justify-items: center; }
+        .btn-dpad { width: 45px; height: 45px; background-color: #333; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .btn-dpad:active { background-color: #555; }
+        .btn-dpad.up { grid-column: 2; grid-row: 1; }
+        .btn-dpad.left { grid-column: 1; grid-row: 2; }
+        .btn-dpad.down { grid-column: 2; grid-row: 2; }
+        .btn-dpad.right { grid-column: 3; grid-row: 2; }
+        
+        .ik-group { display: flex; gap: 10px; margin-top: 10px; }
+        .ik-group input { flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 5px; text-align: center; }
+        .ik-group input:disabled { background: #1a1a1a; color: #555; }
+        
+        .color-group { display: flex; gap: 10px; margin-top: 10px; }
+        .color-group input { flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 5px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <h1>Robotic Arm Dashboard</h1>
-    
-    <div class="dashboard">
-        <h3>System Modes</h3>
-        <button class="btn btn-stop" onclick="sendCommand('R')">EMERGENCY STOP</button><br>
-        <button class="btn btn-manual" onclick="sendCommand('M')">MANUAL MODE</button>
-        <button class="btn btn-auto" onclick="sendCommand('T')">AUTO MODE</button>
-        
-        <br><br>
-        <p style="color: #bbb; font-size: 14px;">Enter colors to sort (e.g. BLUE,GREEN):</p>
-        <input type="text" id="colorInput" placeholder="BLUE,GREEN">
-        <button class="btn btn-auto" onclick="sendColors()">Update Colors</button>
-    </div>
-
-    <div class="dashboard">
-        <h3>Manual Controls</h3>
-        <p style="color: #888; font-size: 14px;">Base (A/D) | Shoulder (W/S) | Elbow (I/K) | Gripper (J/L)</p>
-        
-        <div style="display: flex; justify-content: space-around;">
-            <!-- Base & Shoulder -->
-            <div class="controls">
-                <div></div><button class="btn btn-move" onclick="sendCommand('W')">W</button><div></div>
-                <button class="btn btn-move" onclick="sendCommand('A')">A</button>
-                <button class="btn btn-move" onclick="sendCommand('S')">S</button>
-                <button class="btn btn-move" onclick="sendCommand('D')">D</button>
+<div class="container">
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+        <!-- SYSTEM STATUS -->
+        <div class="panel" style="margin-bottom: 20px;">
+            <h3>System Status</h3>
+            <div class="status-grid">
+                <div class="status-item">Current Mode: <span id="uiMode" style="color:#f59e0b;">STOPPED</span></div>
+                <div class="status-item">Target Colors: <span id="uiTarget" style="color:#3b82f6;">NONE</span></div>
             </div>
-            <!-- Elbow & Gripper -->
-            <div class="controls">
-                <div></div><button class="btn btn-move" onclick="sendCommand('I')">I</button><div></div>
-                <button class="btn btn-move" onclick="sendCommand('J')">J</button>
-                <button class="btn btn-move" onclick="sendCommand('K')">K</button>
-                <button class="btn btn-move" onclick="sendCommand('L')">L</button>
+        </div>
+        
+        <!-- SORTING STATS -->
+        <div class="panel" style="margin-bottom: 20px;">
+            <h3>Sorting Statistics</h3>
+            <div class="status-grid">
+                <div class="status-item">Color 1 Sorted: <span id="count1" style="font-size: 18px;">0</span></div>
+                <div class="status-item">Color 2 Sorted: <span id="count2" style="font-size: 18px;">0</span></div>
+            </div>
+        </div>
+
+        <!-- TERMINAL -->
+        <div class="panel">
+            <h3>Terminal / Serial Output</h3>
+            <div class="terminal-box" id="terminal">
+                <div>> WebApp Initialized. Connecting to Firebase...</div>
+            </div>
+            <div class="terminal-input-group">
+                <input type="text" id="termInput" placeholder="Type command here (e.g. R, M, 12,5)..." onkeypress="handleTerminalEnter(event)">
+                <button class="btn btn-blue" onclick="sendFromTerminal()">Send</button>
             </div>
         </div>
     </div>
 
-    <div class="dashboard">
-        <h3>Sorting Stats</h3>
-        <h2 style="color: #3498db;">Color 1 Placed: <span id="count1">0</span></h2>
-        <h2 style="color: #2ecc71;">Color 2 Placed: <span id="count2">0</span></h2>
+    <!-- RIGHT COLUMN -->
+    <div class="right-col">
+        <!-- MASTER CONTROL -->
+        <div class="panel" style="margin-bottom: 20px;">
+            <h3>Master Control</h3>
+            <button class="btn btn-red" onclick="sendCommand('R', 'EMERGENCY STOP')">⨂ EMERGENCY STOP (R)</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-yellow" style="flex: 1;" onclick="sendCommand('M', 'MANUAL MODE')">Manual (M)</button>
+                <button class="btn btn-yellow" style="flex: 1;" onclick="sendCommand('T', 'AUTONOMOUS MODE')">Autonomous (T)</button>
+            </div>
+        </div>
+
+        <!-- TARGET SELECTION -->
+        <div class="panel" style="margin-bottom: 20px;">
+            <h3>Target Selection</h3>
+            <p style="font-size: 13px; color: #888; margin-top: 0;">Enter colors separated by a comma (e.g. BLUE,GREEN)</p>
+            <div class="color-group">
+                <input type="text" id="colorInput" placeholder="BLUE,GREEN">
+                <button class="btn btn-blue" onclick="sendColors()">Update</button>
+            </div>
+        </div>
+
+        <!-- MANUAL JOGGING -->
+        <div class="panel" style="margin-bottom: 20px;">
+            <h3>Manual Jogging Controls</h3>
+            <div class="controls-wrapper">
+                <div style="text-align: center;">
+                    <span style="font-size: 12px; color: #888;">Base & Shoulder</span>
+                    <div class="d-pad" style="margin-top: 10px;">
+                        <button class="btn-dpad up" onclick="sendCommand('W')">W</button>
+                        <button class="btn-dpad left" onclick="sendCommand('A')">A</button>
+                        <button class="btn-dpad down" onclick="sendCommand('S')">S</button>
+                        <button class="btn-dpad right" onclick="sendCommand('D')">D</button>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <span style="font-size: 12px; color: #888;">Elbow & Gripper</span>
+                    <div class="d-pad" style="margin-top: 10px;">
+                        <button class="btn-dpad up" onclick="sendCommand('I')">I</button>
+                        <button class="btn-dpad left" onclick="sendCommand('J')">J</button>
+                        <button class="btn-dpad down" onclick="sendCommand('K')">K</button>
+                        <button class="btn-dpad right" onclick="sendCommand('L')">L</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COORDINATE APPROACH (IK) -->
+        <div class="panel">
+            <h3>Coordinate Approach (IK)</h3>
+            <p style="font-size: 12px; color: #ef4444; margin-top: 0;" id="ikWarning">* Enable Manual Mode (M) to enter coordinates.</p>
+            <div class="ik-group">
+                <input type="number" id="ikX" placeholder="X (cm)" disabled>
+                <input type="number" id="ikY" placeholder="Y (cm)" disabled>
+                <button class="btn btn-blue" id="ikBtn" disabled onclick="sendIK()">GO (X,Y)</button>
+            </div>
+        </div>
     </div>
+</div>
 
-    <!-- Firebase SDKs (Modular Version) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+<!-- Firebase SDKs -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Your Firebase configuration from the screenshot
-        const firebaseConfig = {
-            apiKey: "AIzaSyAzvBGo7jcg0kZNe-GqHgfYMM8ocNIk6iI",
-            databaseURL: "https://robo-arm-41afc-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "robo-arm-41afc"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAzvBGo7jcg0kZNe-GqHgfYMM8ocNIk6iI",
+        databaseURL: "https://robo-arm-41afc-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "robo-arm-41afc"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-        // Function to send commands to Firebase
-        window.sendCommand = function(cmd) {
-            set(ref(db, 'arm/command'), cmd);
-            // Clear command after 500ms so ESP32 knows it's a single trigger
-            setTimeout(() => set(ref(db, 'arm/command'), ""), 500); 
-        };
+    function logTerminal(msg) {
+        const term = document.getElementById('terminal');
+        const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+        term.innerHTML += `<div><span style="color:#555">[${time}]</span> ${msg}</div>`;
+        term.scrollTop = term.scrollHeight; // Auto-scroll to bottom
+    }
 
-        window.sendColors = function() {
-            let colors = document.getElementById("colorInput").value;
-            if(colors != "") {
-                window.sendCommand(colors.toUpperCase());
-                document.getElementById("colorInput").value = ""; // clear input
-            }
-        };
+    logTerminal("> Connected to Database successfully.");
 
-        // Listen for live counts from ESP32
-        onValue(ref(db, 'arm/stats'), (snapshot) => {
-            const data = snapshot.val();
-            if(data) {
-                document.getElementById('count1').innerText = data.color1 || 0;
-                document.getElementById('count2').innerText = data.color2 || 0;
-            }
-        });
-    </script>
+    window.sendCommand = function(cmd, desc = "") {
+        set(ref(db, 'arm/command'), cmd);
+        
+        let logMsg = `> TX: ${cmd}`;
+        if(desc) logMsg += ` (${desc})`;
+        logTerminal(logMsg);
+
+        // UI Logic for Modes
+        if(cmd === 'M') {
+            document.getElementById('uiMode').innerText = "MANUAL";
+            document.getElementById('uiMode').style.color = "#3b82f6";
+            
+            // Enable IK Inputs
+            document.getElementById('ikX').disabled = false;
+            document.getElementById('ikY').disabled = false;
+            document.getElementById('ikBtn').disabled = false;
+            document.getElementById('ikWarning').innerText = "* Manual mode active. IK inputs enabled.";
+            document.getElementById('ikWarning').style.color = "#4ade80";
+        } 
+        else if (cmd === 'T' || cmd === 'R') {
+            let modeName = cmd === 'T' ? "AUTONOMOUS" : "STOPPED";
+            let colorCode = cmd === 'T' ? "#4ade80" : "#ef4444";
+            document.getElementById('uiMode').innerText = modeName;
+            document.getElementById('uiMode').style.color = colorCode;
+            
+            // Disable IK Inputs
+            document.getElementById('ikX').disabled = true;
+            document.getElementById('ikY').disabled = true;
+            document.getElementById('ikBtn').disabled = true;
+            document.getElementById('ikWarning').innerText = "* Enable Manual Mode (M) to enter coordinates.";
+            document.getElementById('ikWarning').style.color = "#ef4444";
+        }
+
+        setTimeout(() => set(ref(db, 'arm/command'), ""), 500); 
+    };
+
+    window.sendColors = function() {
+        let colors = document.getElementById("colorInput").value.toUpperCase();
+        if(colors !== "") {
+            window.sendCommand(colors, "TARGET COLORS UPDATED");
+            document.getElementById('uiTarget').innerText = colors;
+            document.getElementById("colorInput").value = ""; 
+        }
+    };
+
+    window.sendIK = function() {
+        let x = document.getElementById("ikX").value;
+        let y = document.getElementById("ikY").value;
+        if(x !== "" && y !== "") {
+            let cmd = `${x},${y}`;
+            window.sendCommand(cmd, `IK MOVE TO X:${x}, Y:${y}`);
+            document.getElementById("ikX").value = "";
+            document.getElementById("ikY").value = "";
+        }
+    };
+
+    window.sendFromTerminal = function() {
+        let input = document.getElementById("termInput");
+        if(input.value !== "") {
+            window.sendCommand(input.value.toUpperCase(), "MANUAL TERMINAL ENTRY");
+            input.value = "";
+        }
+    };
+
+    window.handleTerminalEnter = function(e) {
+        if(e.key === 'Enter') {
+            window.sendFromTerminal();
+        }
+    };
+
+    // Listen for Stats from ESP32
+    onValue(ref(db, 'arm/stats'), (snapshot) => {
+        const data = snapshot.val();
+        if(data) {
+            let c1 = data.color1 || 0;
+            let c2 = data.color2 || 0;
+            
+            let oldC1 = document.getElementById('count1').innerText;
+            let oldC2 = document.getElementById('count2').innerText;
+
+            document.getElementById('count1').innerText = c1;
+            document.getElementById('count2').innerText = c2;
+
+            if(c1 > oldC1) logTerminal(`> RX: Sorted item for Color 1! Total: ${c1}`);
+            if(c2 > oldC2) logTerminal(`> RX: Sorted item for Color 2! Total: ${c2}`);
+        }
+    });
+</script>
 </body>
 </html>
