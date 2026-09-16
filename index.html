@@ -40,7 +40,19 @@
         .ik-group input, .color-group input { flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 5px; text-align: center; text-transform: uppercase;}
         .ik-group input:disabled { background: #1a1a1a; color: #555; }
         
-        #armCanvas { background-color: #111; border: 1px solid #333; border-radius: 8px; width: 100%; height: 300px; display: block; margin: 0 auto; }
+        /* New Toggle Switch CSS */
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; margin: 0 10px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #3b82f6; transition: .4s; border-radius: 24px;}
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%;}
+        input:checked + .slider { background-color: #4ade80; }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* Visualizer Container */
+        .vis-container { position: relative; width: 100%; height: 300px; border: 1px solid #333; border-radius: 8px; overflow: hidden; background-color: #111; display: flex; justify-content: center; align-items: center;}
+        #armCanvas { width: 100%; height: 100%; }
+        #webcamFeed { width: 100%; height: 100%; object-fit: cover; display: none; }
+        
         .action-text { text-align: center; font-size: 16px; font-weight: bold; color: #f59e0b; margin-top: 10px; min-height: 20px;}
         
         #statsContainer { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 150px; overflow-y: auto; padding-right: 5px; }
@@ -50,13 +62,44 @@
 <body>
 
 <div class="container">
+    <!-- LEFT COLUMN -->
     <div class="left-col">
+        
+        <!-- VISUALIZER PANEL WITH TOGGLE -->
         <div class="panel" style="margin-bottom: 20px;">
-            <h3>Live Arm Visualizer 🤖</h3>
-            <canvas id="armCanvas" width="500" height="300"></canvas>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="border: none; padding: 0; margin: 0;">Visualizer 🤖</h3>
+                
+                <!-- Toggle Slider -->
+                <div style="display: flex; align-items: center; font-size: 13px; font-weight: bold;">
+                    <span style="color: #3b82f6;">ANIMATION</span>
+                    <label class="switch">
+                      <input type="checkbox" id="visToggle" onchange="toggleVisualizer()">
+                      <span class="slider"></span>
+                    </label>
+                    <span style="color: #4ade80;">LIVE CAMERA</span>
+                </div>
+            </div>
+
+            <!-- Visualization Area -->
+            <div class="vis-container">
+                <!-- 1. Animation Canvas -->
+                <canvas id="armCanvas" width="500" height="300"></canvas>
+
+                <!-- ========================================================= -->
+                <!-- ⬇⬇⬇ UPDATE YOUR DROIDCAM IP LINK HERE (src="..." ) ⬇⬇⬇ -->
+                <!-- ========================================================= -->
+                
+                <img id="webcamFeed" src="http://192.168.8.116:4747/video" alt="Camera Feed Offline">
+                
+                <!-- ========================================================= -->
+                <!-- ⬆⬆⬆ UPDATE YOUR DROIDCAM IP LINK HERE (src="..." ) ⬆⬆⬆ -->
+                <!-- ========================================================= -->
+            </div>
             <div class="action-text" id="actionText">STATUS: IDLE</div>
         </div>
 
+        <!-- SESSION STATS -->
         <div class="panel" style="margin-bottom: 20px;">
             <h3>Session Sorting Stats 📊</h3>
             <div id="statsContainer">
@@ -64,6 +107,7 @@
             </div>
         </div>
 
+        <!-- TERMINAL -->
         <div class="panel">
             <h3>Terminal / Serial Output</h3>
             <div class="terminal-box" id="terminal">
@@ -76,7 +120,9 @@
         </div>
     </div>
 
+    <!-- RIGHT COLUMN -->
     <div class="right-col">
+        <!-- MASTER CONTROL -->
         <div class="panel" style="margin-bottom: 20px;">
             <h3>Master Control</h3>
             <div class="status-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 15px; background: #2d2d2d; padding: 10px; border-radius: 5px;">
@@ -90,6 +136,7 @@
             </div>
         </div>
 
+        <!-- TARGET SELECTION -->
         <div class="panel" style="margin-bottom: 20px;">
             <h3>Target Selection</h3>
             <div class="color-group">
@@ -98,6 +145,7 @@
             </div>
         </div>
 
+        <!-- MANUAL JOGGING -->
         <div class="panel" style="margin-bottom: 20px;">
             <h3>Manual Jogging Controls</h3>
             <div class="controls-wrapper">
@@ -122,6 +170,7 @@
             </div>
         </div>
 
+        <!-- COORDINATE APPROACH (IK) -->
         <div class="panel">
             <h3>Coordinate Approach (IK)</h3>
             <p style="font-size: 12px; color: #ef4444; margin-top: 0;" id="ikWarning">* Enable Manual Mode (M) to enter coordinates.</p>
@@ -146,6 +195,21 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+
+    // --- TOGGLE VISUALIZER LOGIC ---
+    window.toggleVisualizer = function() {
+        const toggle = document.getElementById("visToggle");
+        const canvas = document.getElementById("armCanvas");
+        const webcam = document.getElementById("webcamFeed");
+        
+        if (toggle.checked) {
+            canvas.style.display = "none";
+            webcam.style.display = "block";
+        } else {
+            canvas.style.display = "block";
+            webcam.style.display = "none";
+        }
+    };
 
     // --- ANIMATION LOGIC ---
     const canvas = document.getElementById("armCanvas");
@@ -208,7 +272,6 @@
                 `;
             }
         } else {
-            // When ESP clears the node, UI returns to empty state
             container.innerHTML = `<div style="color:#888; padding: 10px;">Waiting for first sorted object in this session...</div>`;
         }
     });
