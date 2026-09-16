@@ -40,7 +40,7 @@
         .ik-group input, .color-group input { flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 5px; text-align: center; text-transform: uppercase;}
         .ik-group input:disabled { background: #1a1a1a; color: #555; }
         
-        /* New Toggle Switch CSS */
+        /* Toggle Switch CSS */
         .switch { position: relative; display: inline-block; width: 46px; height: 24px; margin: 0 10px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #3b82f6; transition: .4s; border-radius: 24px;}
@@ -51,7 +51,7 @@
         /* Visualizer Container */
         .vis-container { position: relative; width: 100%; height: 300px; border: 1px solid #333; border-radius: 8px; overflow: hidden; background-color: #111; display: flex; justify-content: center; align-items: center;}
         #armCanvas { width: 100%; height: 100%; }
-        #webcamFeed { width: 100%; height: 100%; object-fit: cover; display: none; }
+        #webcamFeed { width: 100%; height: 100%; object-fit: cover; display: none; border: none; }
         
         .action-text { text-align: center; font-size: 16px; font-weight: bold; color: #f59e0b; margin-top: 10px; min-height: 20px;}
         
@@ -90,13 +90,14 @@
                 <!-- ⬇⬇⬇ UPDATE YOUR DROIDCAM IP LINK HERE (src="..." ) ⬇⬇⬇ -->
                 <!-- ========================================================= -->
                 
-                <img id="webcamFeed" src="http://10.30.11.233:4747/video" alt="Camera Feed Offline">
+                <!-- 2. DroidCam Live Feed (Using iframe to fix display issues) -->
+                <iframe id="webcamFeed" src="http://192.168.8.116:4747/video" scrolling="no"></iframe>
                 
                 <!-- ========================================================= -->
                 <!-- ⬆⬆⬆ UPDATE YOUR DROIDCAM IP LINK HERE (src="..." ) ⬆⬆⬆ -->
                 <!-- ========================================================= -->
             </div>
-            <div class="action-text" id="actionText">STATUS: IDLE</div>
+            <div class="action-text" id="actionText">STATUS: INITIALIZING...</div>
         </div>
 
         <!-- SESSION STATS -->
@@ -214,7 +215,7 @@
     // --- ANIMATION LOGIC ---
     const canvas = document.getElementById("armCanvas");
     const ctx = canvas.getContext("2d");
-    let armData = { b: 30, s: 60, e: 180, g: 90, act: "INITIALIZING..." };
+    let armData = { b: 30, s: 60, e: 180, g: 90, act: "WAITING FOR ESP32..." };
 
     function drawArm() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -246,9 +247,21 @@
     }
     drawArm();
 
+    // --- FIXED TELEMETRY PARSER ---
     onValue(ref(db, 'arm/telemetry'), (snapshot) => {
-        if(snapshot.val()) {
-            try { armData = JSON.parse(snapshot.val()); drawArm(); } catch(e) {}
+        if(snapshot.exists()) {
+            try { 
+                let rawData = snapshot.val();
+                // Check if Firebase returned a string or a JSON object directly
+                if (typeof rawData === 'string') {
+                    armData = JSON.parse(rawData); 
+                } else {
+                    armData = rawData; 
+                }
+                drawArm(); 
+            } catch(e) {
+                console.error("Visualizer Error:", e);
+            }
         }
     });
 
